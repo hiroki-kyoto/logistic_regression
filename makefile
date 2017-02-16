@@ -3,6 +3,6 @@ TARGETS = lr.o
 $(TARGETS) :
 	$(CC) -o lr.o lr.cpp
 clean :
-	@rm *.o && echo "object files cleaned!"
+	rm *.o
 run : $(TARGETS)
-	@./lr.o
+	./lr.o

@@ -16,8 +16,8 @@ using namespace std;
 #define TARGET_ACCURACY 0.99
 #define FEATURE_DIM 30
 #define BATCH_SIZE 256
-#define BATCH_TOTAL 100
-#define ERROR_LAST_ITERATION 100
+#define BATCH_TOTAL 1024
+#define ERROR_LAST_ITERATION 30
 #define LEARNING_RATE 0.01
 #define LINES_TO_READ 977
 #define TRAIN_RECORD_NUM 777
@@ -107,11 +107,11 @@ void prepare_sample_batch( void * data, vector< pair<int, float> > & out, int * 
     }
     // add bias
     out.push_back( make_pair<int, float>( FEATURE_DIM - 1, 1.0 ) );
-    *label =mat[j * FEATURE_DIM + FEATURE_DIM - 1];
+    *label = (int) mat[j * FEATURE_DIM + FEATURE_DIM - 1];
 }
 
 
-void cpu_lr ( void * data ) {
+void cpu_lr ( void * data, float * _model ) {
 	float learning_rate = LEARNING_RATE;
 	float lambda = 0.00;
 	float err;
@@ -157,13 +157,14 @@ void cpu_lr ( void * data ) {
 			break;
 		}
 	}
-	std::cout << "final model accuracy is: " << 1.0-err_tot/ERROR_LAST_ITERATION << std::endl;
+	std::cout << "training accuracy: " << 1.0-err_tot/ERROR_LAST_ITERATION << std::endl;
 	// print weights
-	for (i = 0; i < model.size(); i++)
+	for (i = 0; i < model.size(); i++) {
+		_model[i] = model[i];
 		std::cout << model[i] << " ";
+	}
 	std::cout << std::endl;
 }
-
 
 
 // split line into vectors of words
@@ -535,6 +536,47 @@ void clear_data( void ** data ) {
     *data = NULL;
 }
 
+
+void test_model( void * data, float * model ) {
+	int i, j;
+	float s, t, accuracy, precision, recall, f_value;
+	int true_accept = 0;
+	int false_accept = 0;
+	int true_refuse = 0;
+	int false_refuse = 0;
+
+	float * mat = (float*)data;
+	for ( i=0; i<TEST_RECORD_NUM; i++ ) {
+		s = 0.0;
+		for ( j=0; j<FEATURE_DIM - 1; j++ ) {
+			s += model[j] * mat[ (TRAIN_RECORD_NUM + i) * FEATURE_DIM + j ];
+		}
+		s += model[FEATURE_DIM - 1];
+		s = F_SIGMOID( s );
+		s = s > 0.5;
+		t = mat[(TRAIN_RECORD_NUM + i) * FEATURE_DIM + FEATURE_DIM - 1];
+		if ( t == 1 && s == 1 ) {
+			true_accept ++;
+		} else if ( t == 1 && s == 0 ) {
+			false_refuse ++;
+		} else if ( t == 0 && s == 1 ) {
+			false_accept ++;
+		} else if ( t == 0 && s == 0 ) {
+			true_refuse ++;
+		}
+	}
+	// print out model analysis
+	accuracy = 1.0 * (true_accept + true_refuse) / TEST_RECORD_NUM;
+	precision = 1.0 * true_accept/(true_accept + false_accept);
+	recall = 1.0 * true_accept/(true_accept + false_refuse);
+	f_value = precision * recall * 2.0 / ( precision + recall );
+	fprintf( stdout, "accuracy: %.3f.\n", accuracy );
+	fprintf( stdout, "precision: %.3f.\n", precision );
+	fprintf( stdout, "recall: %.3f.\n", recall );
+	fprintf( stdout, "F-value: %.3f.\n", f_value );
+}
+
+
 int main() {
 #ifdef _WIN32
 	LARGE_INTEGER begin;
@@ -545,22 +587,23 @@ int main() {
 #endif
     // read data
     void * data;
+	float * model = new float[FEATURE_DIM];
     read_data( "_2G_FILTERED.CSV", &data );
-
     // training
-	cpu_lr( data );
+	// training
+    // before training, set random seeds
+    srand( (unsigned long) 127 );
+	cpu_lr( data, model );
 #ifdef _WIN32
 	QueryPerformanceCounter(&end);
 	double millsec = 1000.0 * (end.QuadPart - begin.QuadPart)/freq.QuadPart;
 	std::cout<<"cost time: "<< millsec << " milliseconds." << std::endl;
 	fflush(stdout);
 #endif
-
     // test model
-
-
+	test_model( data, model );
     // clear
     clear_data( &data );
-
+	delete [] model;
     return 0;
 }
