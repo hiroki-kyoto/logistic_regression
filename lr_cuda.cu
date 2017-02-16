@@ -111,26 +111,36 @@ void prepare_sample_batch( void * data, vector< pair<int, float> > & out, int * 
 }
 
 
-__global__ void cuda_lr ( void * data, float * _model ) {
+__global__ void cuda_lr ( void * _data, float * _model ) {
 	float learning_rate = LEARNING_RATE;
 	float lambda = 0.00;
 	float err;
 	float err_hist[ERROR_LAST_ITERATION]; // error last for a low level
-	int err_id = 0;
+	int i, j, l, err_id = 0;
 	float err_tot = 0;
-	for(int i=0; i<ERROR_LAST_ITERATION; i++) {
+	for ( i=0; i<ERROR_LAST_ITERATION; i++) {
 		err_hist[i] = 1.0;
 		err_tot += err_hist[i];
 	}
-	vector<float> model(FEATURE_DIM, 0);
+    float * model = cudaMalloc( sizeof(float) * FEATURE_DIM ); /*__device__*/
 	// initialize model
-	for (int i = 0; i < model.size(); i++) {
-		model[i] = 0.5 - (double)(rand() % 10000) / 10000.0;
-		//model[i] = 1.0;
+	for (i = 0; i < model.size(); i++) {
+        _model[i] = 0.5 - (double)(rand() % 10000) / 10000.0;
 	}
+    cudaMemcpy( (char*)model, (char*)_model, sizeof(float)*FEATURE_DIM, cudaMemcpyHostToDevice);
 	// mini-batch algorithm with steepest-descent method
-	size_t i, j;
-	int l;
+    // training matrix
+    float * data = cudaMalloc( sizeof(float) * FEATURE_DIM * TRAIN_RECORD_NUM );
+    cudaMemcpy(
+        (char*)data,
+        (char*)_data,
+        sizeof(float)*FEATURE_DIM*TRAIN_RECORD_NUM,
+        cudaMemcpyHostToDevice
+    );
+
+    int * seq = cudaMalloc( sizeof(int) * BATCH_SIZE * BATCH_TOTAL ); /* __device__ */
+    
+
 	for (i = 0; i < BATCH_TOTAL; i++) {
 		vector< vector< pair<int, float> > > batch_data;
 		vector< int > batch_label;

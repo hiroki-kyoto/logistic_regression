@@ -15,8 +15,8 @@ using namespace std;
 
 #define TARGET_ACCURACY 0.99
 #define FEATURE_DIM 30
-#define BATCH_SIZE 256
-#define BATCH_TOTAL 1024
+#define BATCH_SIZE 32
+#define BATCH_TOTAL 8192
 #define ERROR_LAST_ITERATION 30
 #define LEARNING_RATE 0.01
 #define LINES_TO_READ 977
