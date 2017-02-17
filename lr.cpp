@@ -112,6 +112,7 @@ void prepare_sample_batch( void * data, vector< pair<int, float> > & out, int * 
 
 
 void cpu_lr ( void * data, float * _model ) {
+	fprintf( stdout, "============== TRAIN MODEL ===============\n" );
 	float learning_rate = LEARNING_RATE;
 	float lambda = 0.00;
 	float err;
@@ -144,7 +145,7 @@ void cpu_lr ( void * data, float * _model ) {
 		// caculate the error
 		err = cpu_batch_grad(batch_data, batch_label, model,
 			learning_rate, lambda);
-		cout << "iter#" << i << " mean error: " << err << endl;
+		//cout << "iter#" << i << " mean error: " << err << endl;
 
 		// update error history
 		err_tot -= err_hist[err_id];
@@ -197,12 +198,14 @@ void split_line(
 
 // read data from csv file and convert it into sparsed data format
 void read_data( const char * file, void ** data ) {
+	fprintf( stdout, "============== READ DATA ===============\n" );
     // last stop date
     std::ifstream strm;
     int i, j, k;
     char str[LINE_WIDTH];
     std::vector< std::string > names;
     std::vector< std::string > values;
+	std::string _s;
     float * mat = new float[FEATURE_DIM * LINES_TO_READ];
     float v;
 
@@ -217,25 +220,27 @@ void read_data( const char * file, void ** data ) {
     // read header
     strm.getline( str, sizeof(str)-1 );
     split_line( names, str, ',' );
+	fprintf( stdout, "CSV DATA HEAD READ!\n" );
+	fprintf( stdout, "NAMES FOUDN: %lu.\n", names.size() );
+
+	// for the last name: '\r' may be mixed in.
+	_s = names[names.size()-1];
+	i = _s.length();
+	if ( _s[i-1] == '\r' ) {
+		names[names.size()-1] = _s.substr(0, i-1 );
+	}
 
     // read body
     for ( j=0; j<LINES_TO_READ; j++ ) {
-
         strm.getline( str, sizeof(str)-1 );
         split_line( values, str, ',' );
-
         for ( i=0, k=0; i<values.size(); i++ ) {
-
             k++;
-
             if ( names[i] == "LAST_STOP_DATE" ) {
-
                 v = atof( values[i].c_str() );
-
                 if ( v <= 0 || v > 12 ) {
                     mat[j * FEATURE_DIM + k - 1 ] = 13;
                 }
-
                 mat[j * FEATURE_DIM + k - 1 ] = v;
 
             } else if ( names[i] == "INNET_MONTHS" ) {
@@ -532,12 +537,14 @@ void read_data( const char * file, void ** data ) {
 
 
 void clear_data( void ** data ) {
+	fprintf( stdout, "=============== CLEAN DATA ===============\n" );
     delete (float*)(*data);
     *data = NULL;
 }
 
 
 void test_model( void * data, float * model ) {
+	fprintf( stdout, "============== TEST MODEL ===============\n" );
 	int i, j;
 	float s, t, accuracy, precision, recall, f_value;
 	int true_accept = 0;
