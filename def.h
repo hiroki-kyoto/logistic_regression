@@ -27,23 +27,27 @@ typedef int VARIABLE_ROLE;
 #define VARIABLE_ROLE_NONE          1
 #define VARIABLE_ROLE_TARGET        2
 
-// data structure of orginal data 
+// data structure of orginal data
 typedef struct T_ORIGINAL_DATA {
 	int col_num;
 	int row_num;
-    
+
 	VARIABLE_TYPE * var_types;
-	
+
     char ** variables;
 	char *** values;
-} odata;
+} table;
+
+typedef table odata;
 
 
 typedef struct T_MATRIX {
     int col_num;
     int row_num;
     float * data;
-} mdata;
+} matrix;
+
+typedef matrix mdata;
 
 typedef struct T_SPARSE_MATRIX {
     int col_num;
@@ -52,6 +56,10 @@ typedef struct T_SPARSE_MATRIX {
     int * col_ids;
     int * row_ids;
     float * data;
-} sdata;
+} sparse_matrix;
+
+typedef struct T_PARAM {
+	int max_category_num;
+} param;
 
 #endif // DEF_H

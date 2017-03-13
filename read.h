@@ -15,22 +15,26 @@
  * value_types : set value types for variables;
  * variable_types : set types for variable [CONTINUOUS, FLAG, CATEGORIAL];
  * variable_roles : set roles for variable [INPUT, TARGET, NONE]
+ * is_quoted : set if the dataset to read use quoted format
+ * use_trim : set if to trim columns(only front and tail spaces)
 */
-BOOL read( 
+BOOL read(
 		odata * data,
-		const char * file_path, 
-		char col_delim, 
-		char row_delim, 
-		int col_num, 
-		int row_num, 
+		const char * file_path,
+		char col_delim,
+		char row_delim,
+		int col_num,
+		int row_num,
 		VALUE_TYPE * value_types,
-        VARIABLE_TYPE * variable_types, 
-        VARIABLE_ROLE * variable_roles );
-
+        VARIABLE_TYPE * variable_types,
+        VARIABLE_ROLE * variable_roles,
+		BOOL is_quoted,
+		BOOL use_trim
+ );
 
 
 /* function definition */
-BOOL read( 
+BOOL read(
 		odata * data,
 		const char * file_path,
 		char col_delim,
@@ -38,22 +42,25 @@ BOOL read(
 		int col_num,
 		int row_num,
         VALUE_TYPE * value_types,
-        VARIABLE_TYPE * variable_types, 
-        VARIABLE_ROLE * variable_roles ) {
-	
+        VARIABLE_TYPE * variable_types,
+        VARIABLE_ROLE * variable_roles,
+		BOOL is_quoted,
+		BOOL use_trim
+) {
+
 	FILE * fp = fopen( file_path, "rt" );
-	
+
 	if ( !fp ) {
 		fprintf( stdout, "cannot open file [%s] ! \n", file_path );
 		fflush( stdout );
 		return FALSE;
 	}
-	
+
 	if ( !col_delim )
 		col_delim = ',';
 	if ( !row_delim )
 		row_delim = '\n';
-	
+
 	// read file into data structure
     char c;
 	int i = 0;
@@ -68,15 +75,19 @@ BOOL read(
     VALUE_TYPE t_val;
     VARIABLE_TYPE t_var;
     VARIABLE_ROLE t_role;
-    
+	BOOL in_quote;
+	int last_nonspace_id;
+
     data->col_num = 0;
     data->row_num = 0;
     data->values = NULL;
     data->variables = NULL;
     data->var_types = NULL;
-	
+
     // first scan to get column number
     istr = 0;
+	in_quote = FALSE;
+	last_nonspace_id = -1;
     while ( TRUE ) {
         if ( feof( fp ) ) {
             fprintf( stdout, "ERROR: file content illegal!\n" );
@@ -86,30 +97,65 @@ BOOL read(
         }
         c = fgetc( fp );
         if ( c == row_delim ) {
-            data->col_num ++; // last column
-            fprintf( stdout, "INFO: found [%d] columns.\n", data->col_num );
-            fflush( stdout );
-            break;
-        }
-        if ( c != col_delim ) {
-            istr ++;
+			if ( in_quote ) {
+				istr ++;
+	            if ( istr >= COLUMN_MAX_WIDTH ) {
+	                fprintf( stdout, "ERROR: column name too long!\n");
+	                fflush( stdout );
+	                return FALSE;
+	            }
+			} else {
+				// trim spaces
+				// just get str from 0 to last_nonspace_id
+				data->col_num ++; // last column
+				istr = 0;
+				last_nonspace_id = -1;
+	            fprintf( stdout, "INFO: found [%d] columns.\n", data->col_num );
+	            fflush( stdout );
+	            break;
+			}
+        } else if ( c == col_delim ) {
+			if ( is_quoted ) {
+				istr ++;
+				if ( istr >= COLUMN_MAX_WIDTH ) {
+					fprintf( stdout, "ERROR: column name too long!\n");
+					fflush( stdout );
+					return FALSE;
+				}
+			} else {
+				if( istr == 0 ) {
+	                fprintf( stdout, "ERROR: column name empty!\n");
+	                fflush( stdout );
+	                return FALSE;
+	            } else {
+	                data->col_num ++;
+	                istr = 0;
+					last_nonspace_id = -1;
+	            }
+			}
+		} else if ( c == '\"' ) { // begin quoted string
+			if ( is_quoted ) {
+				in_quote = !in_quote;
+			}
+		} else if ( c == ' ' ) {
+			if ( last_nonspace_id != -1 ) {
+				istr ++;
+	            if ( istr >= COLUMN_MAX_WIDTH ) {
+	                fprintf( stdout, "ERROR: column name too long!\n");
+	                fflush( stdout );
+	                return FALSE;
+	            }
+			}
+		} else {
+			istr ++;
             if ( istr >= COLUMN_MAX_WIDTH ) {
                 fprintf( stdout, "ERROR: column name too long!\n");
                 fflush( stdout );
                 return FALSE;
             }
-        } else {
-            if( istr == 0 ) {
-                fprintf( stdout, "ERROR: column name empty!\n");
-                fflush( stdout );
-                return FALSE;
-            } else {
-                data->col_num ++;
-                istr = 0;
-            }
         }
     }
-    
+
     if ( col_num > 0 ) {
         if ( col_num > data->col_num ) {
             fprintf( stdout, "ERROR: column number out of range!\n" );
@@ -119,16 +165,16 @@ BOOL read(
             data->col_num = col_num;
         }
     }
-    
+
     if ( !data->col_num ) {
         fprintf( stdout, "ERROR: no columns found!\n" );
         fflush( stdout );
         return FALSE;
     }
-    
+
     // allocate for head names
     data->variables = (char**)malloc( sizeof(char*) * data->col_num );
-    
+
     // second scan to get head names
     fseek( fp, 0, SEEK_SET );
     istr = 0;
@@ -139,7 +185,7 @@ BOOL read(
             memcpy( var_name, str, istr );
             var_name[istr] = 0; // close string
             data->variables[icol++] = var_name;
-            
+
             fprintf( stdout, "INFO: file head names read!\n" );
             fflush( stdout );
             break;
@@ -154,7 +200,7 @@ BOOL read(
             istr = 0;
         }
     }
-    
+
     // continue the second scan to get row number
     while ( !feof( fp ) ) {
         c = fgetc( fp );
@@ -175,7 +221,7 @@ BOOL read(
             data->row_num = row_num;
         }
     }
-    
+
     if ( !data->row_num ) {
         fprintf( stdout, "ERROR: row number cannot be 0!\n" );
         fflush( stdout );
@@ -184,26 +230,26 @@ BOOL read(
         fprintf( stdout, "INFO: row number read as : %d.\n", data->row_num );
         fflush( stdout );
     }
-    
+
     // allocate for value matrix
     data->values = (char***)malloc( sizeof(char**) * data->col_num );
     for ( i = 0; i < data->col_num; i++ ) {
         data->values[i] = (char**)malloc( sizeof(char*) * data->row_num );
     }
-    
+
     // run third scan to fill matrix
     istr = 0;
     irow = 0;
     icol = 0;
     skip_to_next_row = FALSE;
     fseek( fp, 0, SEEK_SET );
-    
+
     // move to second row
     c = fgetc( fp );
     while ( c != row_delim ) {
         c = fgetc( fp );
     }
-    
+
 	while ( !feof( fp ) ) {
 		c = fgetc( fp );
         if( skip_to_next_row && ( c != row_delim ) ) {
@@ -249,19 +295,9 @@ BOOL read(
             break;
         }
 	}
-    /*
-    // save last value
-    if ( feof( fp ) ) { // last row in file
-        if ( !skip_to_next_row ) { // last char is not row delimiter
-            if ( c != col_delim ) { // last char is not a col dilimiter
-                var_value = (char*)malloc( sizeof(char) * ( istr + 1 ) );
-                memcpy( var_value, str, istr );
-                var_value[istr] = 0; // close string
-                data->values[icol++][irow++] = var_value;
-            }
-        }
-    }*/
-    
+
+	fprintf( stdout, "reading over!\n" );
+
     if ( irow == data->row_num ) {
         fprintf( stdout, "INFO: matrix value read OK!\n" );
         fflush( stdout );
@@ -271,7 +307,7 @@ BOOL read(
         fflush( stdout );
         return FALSE;
     }
-    
+
     // print header
     fprintf( stdout, "VARIABLES:\n" );
     for ( i=0; i<data->col_num; i++ ) {
@@ -279,7 +315,7 @@ BOOL read(
     }
     fprintf( stdout, "\n" );
     fflush( stdout );
-    
+
     // convert to make extended data
     if ( !value_types ) {
         fprintf( stdout, "ERROR: value types not set!\n" );
@@ -296,18 +332,18 @@ BOOL read(
         fflush( stdout );
         return FALSE;
     }
-    
+
     for ( i=0; i<data->col_num; i++ ) {
         t_val = value_types[i];
         t_var = variable_types[i];
         t_role = variable_roles[i];
-        
+
         for ( j=0; j<data->row_num; j++ ) {
-            
+
         }
     }
-    
+
 	fclose( fp );
-	
+
 	return TRUE;
 }

@@ -10,8 +10,8 @@ int main( int argc, const char ** argv ) {
         fprintf( stdout, "failed to read file!\n" );
 		return 1;
     }*/
-    
-    if ( !read( &od, "churn_training.txt", '\t', '\n', 0, 0, 0 ) ) {
+
+    if ( !read( &od, "_2G_FILTERED.CSV", ',', '\n', 0, 0, NULL, NULL, NULL, FALSE, FALSE ) ) {
         fprintf( stdout, "failed to read file!\n" );
         fflush( stdout );
 		return 1;
