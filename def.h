@@ -27,6 +27,9 @@ typedef int VARIABLE_ROLE;
 #define VARIABLE_ROLE_NONE          1
 #define VARIABLE_ROLE_TARGET        2
 
+#define FILE_READ_BUFFER_SIZE		256
+#define FILE_WRITE_BUFFER_SIZE		256
+
 // data structure of orginal data
 typedef struct T_ORIGINAL_DATA {
 	int col_num;
@@ -57,6 +60,13 @@ typedef struct T_SPARSE_MATRIX {
     int * row_ids;
     float * data;
 } sparse_matrix;
+
+typedef struct T_NODE {
+	void * data;
+	node * prev;
+	node * next;
+} node;
+
 
 typedef struct T_PARAM {
 	int max_category_num;
