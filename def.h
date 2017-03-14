@@ -6,9 +6,13 @@ typedef int BOOL;
 #define TRUE	1
 #define FALSE	0
 
+#define CSV_COL_SEG					','
+#define CSV_ROW_SEG					'\n'
+
 #define COLUMN_MAX_WIDTH            64
 #define VARIABLE_NAME_LENGTH        64
 #define VARIABLE_VALUE_LENGTH       64
+#define MAX_CATEGORY_NUM 			8
 
 typedef int VALUE_TYPE;
 
@@ -43,8 +47,14 @@ typedef struct T_ORIGINAL_DATA {
 
 typedef table odata;
 
+typedef struct T_NODE {
+	void * data;
+	struct T_NODE * prev;
+	struct T_NODE * next;
+} node;
 
 typedef struct T_MATRIX {
+	node * names;
     int col_num;
     int row_num;
     float * data;
@@ -61,15 +71,9 @@ typedef struct T_SPARSE_MATRIX {
     float * data;
 } sparse_matrix;
 
-typedef struct T_NODE {
-	void * data;
-	node * prev;
-	node * next;
-} node;
-
 
 typedef struct T_PARAM {
-	int max_category_num;
+
 } param;
 
 #endif // DEF_H

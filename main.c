@@ -1,4 +1,4 @@
-#include "read.h"
+#include "read_data.h"
 
 int main( int argc, const char ** argv ) {
 	odata od;
@@ -11,11 +11,15 @@ int main( int argc, const char ** argv ) {
 		return 1;
     }*/
 
-    if ( !read( &od, "_2G_FILTERED.CSV", ',', '\n', 0, 0, NULL, NULL, NULL, FALSE, FALSE ) ) {
+    /*if ( !read( &od, "_2G_FILTERED.CSV", ',', '\n', 0, 0, NULL, NULL, NULL, FALSE, FALSE ) ) {
         fprintf( stdout, "failed to read file!\n" );
         fflush( stdout );
 		return 1;
-    }
+    }*/
+	matrix data;
+	if ( !read_data_from_csv_file( &data, "info.txt", "_2G_FILTERED.CSV" ) ) {
+		exit( 1 );
+	}
 
 	return 0;
 }
