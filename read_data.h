@@ -49,12 +49,32 @@ VALUE_TYPE check_type(char * str, int n ) {
     return VALUE_TYPE_NUMBER;
 }
 
+int find_str_in_arr( const char * str, const char * arr ) {
+    int i, k;
+    BOOL f;
+    for ( i=0; i<MAX_CATEGORY_NUM; ++i ) {
+        k = 0;
+        f = TRUE;
+        while ( str[k] ) {
+            if ( arr[i*VARIABLE_VALUE_LENGTH+k] != str[k] ) {
+                f = FALSE;
+                break;
+            }
+            ++k;
+        }
+        if ( f && arr[i*VARIABLE_VALUE_LENGTH+k] == 0 ) {
+            break;
+        }
+    }
+    return i;
+}
+
 int read_data_from_csv_file( matrix * data, const char * info, const char * file ) {
     // read info file and get types of variables
     FILE * fp;
-    char buf[FILE_READ_BUFFER_SIZE], * str;
+    char buf[FILE_READ_BUFFER_SIZE], * str, * labels;
     node * pname, * ptype, * types;
-    int i, k;
+    int i, k, m;
 
     pname = (node*)malloc( sizeof(node) );
     pname->prev = 0;
@@ -152,6 +172,10 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     }
     // prepare matrix
     data->col_num = i;
+    labels = (char*)malloc(sizeof(char)*data->col_num);
+    for ( i=0; i<data->col_num; ++i ) {
+        labels[i] = 1;
+    }
     // check how many lines to read
     fclose( fp );
     fp = fopen( file, "rt" );
@@ -172,20 +196,39 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     // read data and abandon some bad variables
     i = 0;
     k = 0;
+    m = 0;
     ptype = types;
     // rewind the file pointer to second line
     fseek( fp, 0, SEEK_SET );
     while ( fgetc(fp) != CSV_ROW_SEG );
     while ( !feof( fp ) ) {
         buf[i] = fgetc( fp );
-        if ( buf[i] == CSV_COL_SEG ) {
+        if ( buf[i] == CSV_COL_SEG || buf[i] == CSV_ROW_SEG ) {
             buf[i] = 0;
             if ( *((int*)(ptype->data)) == VALUE_TYPE_NUMBER ) {
-                data->data[] atof( buf );
-            } else { // it's a string
-
+                data->data[k] = atof( buf );
+            } else { // type = VALUE_TYPE_STRING
+                if ( labels[k] ) {
+                    data->data[k] = find_str_in_arr(buf, str + VARIABLE_VALUE_LENGTH * MAX_CATEGORY_NUM * m );
+                    if ( data->data[k]>=MAX_CATEGORY_NUM ) {
+                        // mark this variable as not categorical variable
+                        labels[k] = 0;
+                    }
+                }
+                ptype = ptype->next;
+                ++m;
             }
-        }  else if ( buf[i] == CSV_ROW_SEG ) {
+            i = 0;
+            ++k;
+            // deal with row index
+            if ( buf[i] == CSV_ROW_SEG ) {
+                if ( k%(data->col_num) ) {
+                    fprintf( stdout, "csv data format illegal!\n" );
+                    return FALSE; // format error
+                }
+                ptype = types;
+                m = 0;
+            }
         } else {
             ++i;
             if ( i >= VARIABLE_VALUE_LENGTH ) {
@@ -193,6 +236,14 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
             }
         }
     }
+
+#ifdef __DEBUG__
+    // check used and unsued variables
+    for ( i=0; i<data->col_num; ++i ) {
+        fprintf( stdout, "%d ", (int)labels[i] );
+    }
+    fprintf( stdout, "\n" );
+#endif
 
     return TRUE;
 }
