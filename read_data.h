@@ -49,10 +49,15 @@ VALUE_TYPE check_type(char * str, int n ) {
     return VALUE_TYPE_NUMBER;
 }
 
-int find_str_in_arr( const char * str, const char * arr ) {
+int find_str_in_arr( char * str, char * arr ) {
     int i, k;
     BOOL f;
     for ( i=0; i<MAX_CATEGORY_NUM; ++i ) {
+        if ( arr[i*VARIABLE_VALUE_LENGTH] == 0 ) {
+            // fill it into the array
+            memcpy( arr+(i*VARIABLE_VALUE_LENGTH), str, VARIABLE_VALUE_LENGTH * sizeof(char) );
+            break;
+        }
         k = 0;
         f = TRUE;
         while ( str[k] ) {
@@ -72,7 +77,7 @@ int find_str_in_arr( const char * str, const char * arr ) {
 int read_data_from_csv_file( matrix * data, const char * info, const char * file ) {
     // read info file and get types of variables
     FILE * fp;
-    char buf[FILE_READ_BUFFER_SIZE], * str, * labels;
+    char buf[FILE_READ_BUFFER_SIZE], * str, * labels, tmp;
     node * pname, * ptype, * types;
     int i, k, m;
 
@@ -167,6 +172,7 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
         }
     }
     str = (char*)malloc( sizeof(char) * VARIABLE_VALUE_LENGTH * MAX_CATEGORY_NUM * k );
+    memset( str, 0, VARIABLE_VALUE_LENGTH * MAX_CATEGORY_NUM * k );
     if ( !str ) {
         exit( 1 );
     }
@@ -204,6 +210,7 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     while ( !feof( fp ) ) {
         buf[i] = fgetc( fp );
         if ( buf[i] == CSV_COL_SEG || buf[i] == CSV_ROW_SEG ) {
+            tmp = buf[i];
             buf[i] = 0;
             if ( *((int*)(ptype->data)) == VALUE_TYPE_NUMBER ) {
                 data->data[k] = atof( buf );
@@ -221,7 +228,7 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
             i = 0;
             ++k;
             // deal with row index
-            if ( buf[i] == CSV_ROW_SEG ) {
+            if ( tmp == CSV_ROW_SEG ) {
                 if ( k%(data->col_num) ) {
                     fprintf( stdout, "csv data format illegal!\n" );
                     return FALSE; // format error
