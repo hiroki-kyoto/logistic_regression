@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "def.h"
 
@@ -81,11 +80,11 @@ int find_str_in_arr( char * str, char * arr ) {
 int read_data_from_csv_file( matrix * data, const char * info, const char * file ) {
     // read info file and get types of variables
     FILE * fp;
-    char buf[FILE_READ_BUFFER_SIZE], * str, * labels, tmp, * row_labels;
+    char buf[FILE_READ_BUFFER_SIZE], * str, * labels, tmp;
     node * pname, * ptype, * types;
-    int i, k, m, n, s, ncol, nrow, *hist;
+    int i, k, m;
     double miu, delta, p;
-    float * rows;
+    node * mat;
 
     pname = (node*)malloc( sizeof(node) );
     pname->prev = 0;
@@ -202,7 +201,6 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     }
     data->row_num = i-1; // the head line contains columns of variable names
     data->data = (float*)malloc( sizeof(float)*data->col_num*data->row_num );
-    row_labels = (char*)malloc( sizeof(char)*data->row_num );
 #ifdef __DEBUG__
     fprintf( stdout, "ROW: %d\t COL: %d\n", data->row_num, data->col_num );
 #endif
@@ -250,7 +248,7 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
             }
         }
     }
-    fclose( fp );
+
 #ifdef __DEBUG__
     // check used and unsued variables
     pname = data->names;
@@ -262,11 +260,8 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     }
     fprintf( stdout, "====================================\n" );
 #endif
+
     // reduce bad samples using 3-delta principle
-    // initialize the row labels
-    for ( i=0; i<data->row_num; ++i ) {
-        row_labels[i] = 1;
-    }
     for ( i=0; i<data->col_num; ++i ) {
         miu = 0;
         delta = 0;
@@ -282,175 +277,18 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
         delta = sqrt(delta);
         for ( k=0; k<data->row_num; ++k ) {
             p = data->data[k*data->col_num+i];
-            if ( p < miu-DELTA_FACTOR*delta || p > miu+DELTA_FACTOR*delta ) {
-                row_labels[k] = 0; // mark current row as abandoned
+            if ( p < miu-3*delta || p > miu+3*delta ) {
+                // remove the selected record and update matrix
+
             }
         }
     }
 
     // reduce those non-variance variables
     for ( i=0; i<data->col_num; ++i ) {
-        p = data->data[i];
-        m = 0; // no different
-        for ( k=1; k<data->row_num; ++k ) {
-            if ( row_labels[k] ) {
-                if ( data->data[k*data->col_num+i] != p ) {
-                    m = 1; // different value found
-                    break;
-                }
-            }
-        }
-        if ( !m ) { // ずっと変わらない
-            labels[i] = 0; // mark this column as abandoned
+        for ( k=0; k<data->row_num; ++k ) {
         }
     }
-#ifdef __DEBUG__
-    // check abandoned rows
-    fprintf( stdout, "=========ABANDON ROWS==========\n" );
-    k = 0;
-    for ( i=0; i<data->row_num; ++i ) {
-        if ( !row_labels[i] ) {
-            fprintf( stdout, "%d ", i );
-            ++k;
-            if ( k%8==7 ) {
-                fprintf( stdout, "\n" );
-            }
-            fflush( stdout );
-        }
-    }
-    fprintf( stdout, "\nTOTAL: [%d] ROWS.\n", k );
-    fprintf( stdout, "===============================\n" );
-    // check abandoned columns
-    pname = data->names;
-    nrow = data->row_num - k;
-    k = 0;
-    fprintf( stdout, "=========ABANDON COLUMNS==========\n" );
-    for ( i=0; i<data->col_num; ++i,pname=pname->next ) {
-        if ( !labels[i] ) {
-            fprintf( stdout, "%s\n", (char*)(pname->data) );
-            ++k;
-        }
-    }
-    fprintf( stdout, "TOTAL: [%d] COLUMNS.\n", k );
-    fprintf( stdout, "==================================\n" );
-#endif
-    // expand the string type variables
-    m = 0;
-    ncol = data->col_num - k;
-    ptype = types;
-    pname = data->names;
-    hist = (int*) malloc( sizeof(int)*data->col_num );
-    memset( (char*)hist, 0, sizeof(int)*data->col_num );
-    fprintf( stdout, "=============EXPAND VARIABLES============\n" );
-    for ( i=0; i<data->col_num; ++i ) {
-        if ( labels[i] ) {
-            if ( *(VALUE_TYPE*)(ptype->data) == VALUE_TYPE_NUMBER ) {
-                fprintf( stdout, "%s\n", (char*)pname->data );
-                hist[i] = -1;
-                ++m;
-            } else { // VALUE_TYPE_STRING
-                n = 0; // max id
-                for ( k=0; k<data->row_num; ++k ) {
-                    if ( row_labels[k] ) {
-                        if ( data->data[k*data->col_num+i] > n ) {
-                            n = data->data[k*data->col_num+i];
-                        }
-                    }
-                }
-                hist[i] = n + 1;
-                m += n + 1;
-                fprintf( stdout, "%s[0-%d]\n", (char*)pname->data, n );
-            }
-        }
-        ptype = ptype->next;
-        pname = pname->next;
-    }
-    fprintf( stdout, "EXPAND FROM %d TO %d VARIABLES!\n", ncol, m );
-    // create new matrix for expanded VARIABLES
-    ncol = m;
-    rows = (float*)malloc( sizeof(float)*nrow*ncol );
-    s = 0;  // index of column
-    for ( i=0; i<data->col_num; ++i ) {
-        n = 0;  // index of row
-        if ( hist[i] > 0 ) {    // STRING
-            for ( k=0; k<data->row_num; ++k ) {
-                if ( row_labels[k] ) {
-                    for ( m=0; m<hist[i]; ++m ) {
-                        if ( data->data[k*data->col_num+i]==m ) {
-                            rows[(s+m)*nrow+n] = 1;
-                        } else {
-                            rows[(s+m)*nrow+n] = 0;
-                        }
-                    }
-                    ++n;
-                }
-            }
-            s += hist[i];
-        } else if ( hist[i] < 0 ) { // NUMBER
-            for ( k=0; k<data->row_num; ++k ) {
-                if ( row_labels[k] ) {
-                    rows[s * nrow + n] = data->data[k*data->col_num+i];
-                    ++n;
-                }
-            }
-            ++s;
-        }
-    }
-    fprintf( stdout, "=========================================\n" );
-//============ clear memory usage============
-    // clear types
-    while ( types->next != NULL ) {
-        ptype = types->next;
-        free( types->data );
-        free( types );
-        types = ptype;
-    }
-    free( types->data );
-    free( types );
-    // clear str
-    free( str );
-    // clear labels
-    free( labels );
-    free( row_labels );
-    // clear data
-    free( data->data );
-//=========================================
-//==========rebuild the name list==========
-    types = data->names; // no wild pointer
-    pname = data->names;
-    data->names = (node*)malloc(sizeof(node));
-    data->data = NULL;
-    data->prev = NULL;
-    data->next = NULL;
-    for ( i=0; i<data->col_num; ++i ) {
-        str = (char*)pname->data;
-        if ( hist[i] < 0 ){ // NUMBER
-            // just copy it
-        } else if ( hist[i] > 0 ){
-            for( k=0; k<hist[i]; ++k ) {
-                // copy and append number to tags
-                // str + itoa(k)?
-            }
-        }
-        pname = pname->next;
-    }
-    data->col_num = ncol;
-    data->row_num = nrow;
-    data->data = rows;
-    // clear hist
-    free( hist );
-    // clear names
-    while ( types->next != NULL ) {
-        ptype = types->next;
-        free( types->data );
-        free( types );
-        types = ptype;
-    }
-    free( types->data );
-    free( types );
-//==========================================
-
-
 
     return TRUE;
 }

@@ -12,7 +12,8 @@ typedef int BOOL;
 #define COLUMN_MAX_WIDTH            64
 #define VARIABLE_NAME_LENGTH        64
 #define VARIABLE_VALUE_LENGTH       64
-#define MAX_CATEGORY_NUM 			8
+#define MAX_CATEGORY_NUM 			32
+#define DELTA_FACTOR				8
 
 typedef int VALUE_TYPE;
 
