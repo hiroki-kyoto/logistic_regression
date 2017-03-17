@@ -769,11 +769,12 @@ int read_data_from_csv_file(
     }
     free( ptype );
     free(labels);
-    
+
     fprintf( stdout, "=============================================\n" );
     //===================================================
 
 
     return TRUE;
 }
+
 #endif // READ_DATA_H

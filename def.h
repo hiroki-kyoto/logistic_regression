@@ -21,7 +21,7 @@ typedef int BOOL;
 #define NORM_MIN_MAX				0
 
 // VARIABLE SELECTION
-#define PEARSON_THRESHOLD           0.01
+#define PEARSON_THRESHOLD           0.1
 
 typedef int VALUE_TYPE;
 
