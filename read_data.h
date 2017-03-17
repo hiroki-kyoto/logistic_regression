@@ -419,20 +419,34 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     types = data->names; // no wild pointer
     pname = data->names;
     data->names = (node*)malloc(sizeof(node));
-    data->data = NULL;
-    data->prev = NULL;
-    data->next = NULL;
+    data->names->data = NULL;
+    data->names->prev = NULL;
+    data->names->next = NULL;
+    ptype = data->names;
     for ( i=0; i<data->col_num; ++i ) {
         str = (char*)pname->data;
+        pname = pname->next;
         if ( hist[i] < 0 ){ // NUMBER
-            // just copy it
+            if ( ptype->data != NULL ) { // not first name
+                ptype->next = (node*)malloc(sizeof(node));
+                ptype->next->prev = ptype;
+                ptype = ptype->next;
+                ptype->next = NULL;
+            }
+            ptype->data = (char*)malloc(sizeof(char)*VARIABLE_NAME_LENGTH);
+            sprintf( ptype->data, "%s", str );
         } else if ( hist[i] > 0 ){
             for( k=0; k<hist[i]; ++k ) {
-                // copy and append number to tags
-                // str + itoa(k)?
+                if ( ptype->data != NULL ) { // not first name
+                    ptype->next = (node*)malloc(sizeof(node));
+                    ptype->next->prev = ptype;
+                    ptype = ptype->next;
+                    ptype->next = NULL;
+                }
+                ptype->data = (char*)malloc(sizeof(char)*(VARIABLE_NAME_LENGTH+8));
+                sprintf( ptype->data, "%s[%d]", str, k );
             }
         }
-        pname = pname->next;
     }
     data->col_num = ncol;
     data->row_num = nrow;
@@ -449,11 +463,17 @@ int read_data_from_csv_file( matrix * data, const char * info, const char * file
     free( types->data );
     free( types );
 //==========================================
-
-
+#ifdef __DEBUG__
+    pname = data->names;
+    i = 0;
+    while ( pname->next != NULL ) {
+        fprintf( stdout, "[%3d] %s\n", i+1, (char*)pname->data );
+        ++i;
+        pname = pname->next;
+    }
+    fprintf( stdout, "[%3d] %s\n", i+1, (char*)pname->data );
+#endif // __DEBUG__
 
     return TRUE;
 }
-
-
 #endif // READ_DATA_H
