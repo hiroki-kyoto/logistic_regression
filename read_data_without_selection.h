@@ -104,7 +104,7 @@ float sum(float * a, int n){
     return x>0?x:-x;
 }*/
 
-float dot_pro(float * a, float * b, int n){
+double dot_pro(float * a, float * b, int n){
     float s = 0.0;
     int i = 0;
     for (i = 0; i < n; i++){
@@ -113,7 +113,7 @@ float dot_pro(float * a, float * b, int n){
     return s;
 }
 
-void pearson(float * T, int ncol, int nrow, float * Pears){
+void pearson(float *T, int ncol, int nrow, float *Pears){
 	// rows: attrs cols: samples
     int i, j;
 	for (i = 0; i < ncol; i++){
@@ -138,128 +138,51 @@ void pearson(float * T, int ncol, int nrow, float * Pears){
 		}
 	}
 }
-
-BOOL is_all(int n, node * sel, node * del){
-    int i;
-    i = 0;
-    while ( sel->next != NULL ) {
-        sel = sel->next;
-        ++i;
-    }
-    if ( sel->data != NULL ) {
-        ++i;
-    }
-    while ( del->next != NULL ) {
-        del = del->next;
-        ++i;
-    }
-    if ( del->data != NULL ) {
-        ++i;
-    }
-    if (i == n-1 ) {
-        return TRUE;
-    } else {
-        return FALSE;
-    }
-}
-
-BOOL is_in(int idx, node * a){
-    while ( a->next ) {
-        if ( *(int*)(a->data) == idx ) {
-            return TRUE;
-        }
-        a = a->next;
-    }
-
-    if ( a->data != NULL ) {
-        if ( *(int*)(a->data) == idx ) {
-            return TRUE;
-        }
-    }
-
-    return FALSE;
-}
-
-void push_back(node * list, void * val, int size ) {
-    while ( list->next != NULL ) { // go to the end of list
-        list = list->next;
-    }
-    if ( list->data != NULL ) { // if the list is not empty
-        list->next = (node*)malloc(sizeof(node));
-        list->next->prev = list;
-        list = list->next;
-        list->next = NULL;
-    }
-    list->data = (char*)malloc(sizeof(char)*size);
-    memcpy( list->data, (char*)val, sizeof(char)*size );
-}
-
-node * select(float * pears, int n) {
+/*
+void select(float * pears, int n){
     float * tmp, m;
     int i, idx;
-    node * sel, * del, * pnode;
 
     tmp = (float*)malloc((n-1)*sizeof(float));
-    for (i=0; i <n-1; i++) { // pearson coefficients for x(i) -> y
-        tmp[i] = pears[i*n+n-1];
+    for (i=0; i <n-1; i++) {
+        tmp[i] = pears[i][n - 1];
     }
 
     idx = 0;
     m = -2;
-
-    // create sel and del list
-    sel = (node*)malloc(sizeof(node));
-    del = (node*)malloc(sizeof(node));
-
-    sel->prev = NULL;
-    sel->next = NULL;
-    sel->data = NULL;
-
-    del->prev = NULL;
-    del->next = NULL;
-    del->data = NULL;
-
-    while (!is_all(n, sel, del)) {
+//xxxxxx
+    while (!isAll(n, sel, del)){
         m = -2;
-        // find the biggest pearson coefficient for x(i)->y;
-        for (i=0; i<n-1; i++) {
-            if (!is_in(i, sel) &&
-                !is_in(i, del) &&
-                m < tmp[i]
-            ) {
+        for (int i = 0; i < n - 1; i++){
+            if ((!isIn(i, sel)) && (!isIn(i, del)) && m < tmp[i]){
                 m = tmp[i];
                 idx = i;
             }
         }
-        push_back( sel, &idx, sizeof(idx) ); // add the most related x(i) to model;
-        for (i=0; i<n-1; i++){
-            if ( i != idx ) {
-                if (!is_in(i, sel) &&
-                    !is_in(i, del) &&
-                    !is_all(n, sel, del) &&
-                    pears[i*n+idx]>m+PEARSON_THRESHOLD
-                ) {
-                    push_back( del, &i, sizeof(i) ); // remove those co-lineared variables
-                }
+        sel.push_back(idx);
+        for (int i = 0; i < idx; i++){
+            if ((!isIn(i, sel)) && (!isIn(i, del)) && (!isAll(n, sel, del)) && pears[i][idx] > m + threshold){
+                del.push_back(i);
+            }
+        }
+        for (int i = idx + 1; i < n - 1; i++){
+            if ((!isIn(i, sel)) && (!isIn(i, del)) && (!isAll(n, sel, del)) && pears[idx][i] > m + threshold){
+                del.push_back(i);
             }
         }
     }
-
-    // clear memory usage
-    free(tmp);
-    while ( del->next != NULL ) {
-        pnode = del->next;
-        free( del->data );
-        free( del );
-        del = pnode;
+    printf("Selected attributes (rank from import to less import£©: (attribute index start from 1)\n");
+    for (int i = 0; i < sel.size(); i++){
+        printf("%d \t", sel[i] + 1);
     }
-    if ( del->data ) {
-        free( del->data );
+    printf("\nNonSelected attributes: (attribute index start from 1)\n");
+    for (int i = 0; i < del.size(); i++){
+        printf("%d \t", del[i] + 1);
     }
-    free( del );
+    printf("\n");
 
-    return sel;
 }
+*/
 
 int read_data_from_csv_file(
     matrix * data,
@@ -273,7 +196,7 @@ int read_data_from_csv_file(
     node * pname, * ptype, * types, * names, * ptmp;
     int i, k, m, n, s, ncol, nrow, *hist;
     double miu, delta, p;
-    float * rows, * pears;
+    float * rows;
 
     pname = (node*)malloc( sizeof(node) );
     pname->prev = 0;
@@ -643,7 +566,7 @@ int read_data_from_csv_file(
     // update matrix
     data->col_num = ncol;
     data->row_num = nrow;
-    data->data = rows; // this is a transformed matrix on ROWS!!!
+    data->data = rows;
     // clear hist
     free( hist );
     // clear str
@@ -697,80 +620,7 @@ int read_data_from_csv_file(
     fprintf( stdout, "=============NORMALIZATION DONE==============\n" );
     //=========================================
     //==============VARIABLE SELECTION=================
-    fprintf( stdout, "=============VARIABLE SELECTION==============\n" );
-    // create pearson coefficient matrix
-    pears = (float*)malloc(sizeof(float)*data->col_num*data->col_num);
-    memset((char*)pears, 0, sizeof(float)*data->col_num*data->col_num);
-    pearson(data->data, data->col_num, data->row_num, pears);
-    ptmp = select(pears, data->col_num); // selected ids are stored.
-    ptype = ptmp; // save to release this memory block
-    labels = (char*)malloc(sizeof(char)*data->col_num);
-    memset(labels, 0, sizeof(char)*data->col_num );
-    ncol = 0;
-    while ( ptmp->next != NULL ) {
-        labels[*(int*)(ptmp->data)] = 1;
-        ptmp = ptmp->next;
-        ++ncol;
-    }
-    if ( ptmp->data != NULL ) {
-        labels[*(int*)(ptmp->data)] = 1;
-        ++ncol;
-    }
-    if ( ncol == 0 ) { // in case no variables enter the model
-        fprintf( stdout, "NO VARIABLES SELECTED, MODEL FAILED!\n" );
-        exit(1);
-    }
-    pname = data->names;
-    ptmp = NULL;    // save the last name
-    fprintf(stdout, "SELECTED COLUMNS[%d]: \n", ncol);
-    for (i=0; i<data->col_num; ++i ) {
-        if (labels[i]) {
-            fprintf(stdout, "%s\n", (char*)(pname->data));
-            if ( ptmp == NULL ) { // HEAD NODE!
-                data->names = pname;
-            } else {
-                ptmp->next = pname;
-            }
-            pname->prev = ptmp;
-            ptmp = pname; // update the last name
-            pname = pname->next;
-        } else {
-            // release nodes
-            types = pname->next;
-            free( pname->data );
-            free( pname );
-            pname = types;
-        }
-    }
-    // rebuild matrix in columns
-    rows = data->data;
-    data->data = (float*)malloc(sizeof(float)*ncol*data->row_num);
-    m = 0; // real column index for new matrix
-    for ( i=0; i<data->col_num; ++i ) {
-        if ( labels[i] ) {
-            for ( k=0; k<data->row_num; ++k ) {
-                data->data[k*ncol+m] = rows[i*data->row_num+k];
-            }
-            ++m;
-        }
-    }
-    data->col_num = ncol;
-    // clear memory usage
-    free( pears );
-    free( rows );
-    while ( ptype->next != NULL ) {
-        ptmp = ptype->next;
-        free(ptype->data);
-        free(ptype);
-        ptype = ptmp;
-    }
-    if ( ptype->data != NULL ) {
-        free( ptype->data );
-    }
-    free( ptype );
-    free(labels);
-    
-    fprintf( stdout, "=============================================\n" );
+
     //===================================================
 
 

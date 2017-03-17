@@ -17,7 +17,9 @@ int main( int argc, const char ** argv ) {
 		return 1;
     }*/
 	matrix data;
-	if ( !read_data_from_csv_file( &data, "info.txt", "_2G_FILTERED.CSV" ) ) {
+	param config;
+	config.norm_method = NORM_MIN_MAX;
+	if ( !read_data_from_csv_file( &data, "info.txt", "_2G_FILTERED.CSV", &config ) ) {
 		exit( 1 );
 	}
 

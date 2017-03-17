@@ -6,14 +6,22 @@ typedef int BOOL;
 #define TRUE	1
 #define FALSE	0
 
+// CONFIGURE FILE FORMAT
 #define CSV_COL_SEG					','
 #define CSV_ROW_SEG					'\n'
 
+// DATA FILE FORMAT REQUIREMENT
 #define COLUMN_MAX_WIDTH            64
 #define VARIABLE_NAME_LENGTH        64
 #define VARIABLE_VALUE_LENGTH       64
 #define MAX_CATEGORY_NUM 			8
 #define DELTA_FACTOR				6
+
+// NORMALIZATION METHODS
+#define NORM_MIN_MAX				0
+
+// VARIABLE SELECTION
+#define PEARSON_THRESHOLD           0.01
 
 typedef int VALUE_TYPE;
 
@@ -74,7 +82,7 @@ typedef struct T_SPARSE_MATRIX {
 
 
 typedef struct T_PARAM {
-
+	int norm_method;
 } param;
 
 #endif // DEF_H
