@@ -22,6 +22,7 @@ int main( int argc, const char ** argv ) {
 	if ( !read_data_from_csv_file( &data, "info.txt", "_2G_FILTERED.CSV", &config ) ) {
 		exit( 1 );
 	}
-
+	// now use data to train model
+	
 	return 0;
 }

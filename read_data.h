@@ -244,7 +244,9 @@ node * select(float * pears, int n) {
             }
         }
     }
-
+    // select the variable [y]
+    i = n - 1;
+    push_back( sel, &i, sizeof(i) );
     // clear memory usage
     free(tmp);
     while ( del->next != NULL ) {
