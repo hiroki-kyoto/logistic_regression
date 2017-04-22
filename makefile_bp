@@ -1,0 +1,12 @@
+CC = g++
+NVCC = nvcc
+
+nn_debug_cpu:
+	$(CC) -o nn.o nn.cpp
+nn_debug_gpu:
+	$(NVCC) -o nn.o nn.cu
+
+run_nn_cpu:
+	./nn.o
+run_nn_gpu:
+	./nn.o
